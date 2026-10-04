@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Test } from "forge-std/Test.sol";
+import { Test, console } from "forge-std/Test.sol";
 import { SourceMint } from "../src/SourceMint.sol";
 
 contract SourceMintTest is Test {
@@ -10,9 +10,37 @@ contract SourceMintTest is Test {
     uint256 constant INITIAL_SUPPLY = 1_000_000 ether;
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
+    address user = address(0x1234);
 
     function setUp() public {
         token = new SourceMint(INITIAL_SUPPLY);
+    }
+
+    function test_NoMintFunction() public {
+        bytes4 selector = bytes4(keccak256("mint(address,uint256)"));
+        bytes memory data = abi.encodeWithSelector(selector, user, 100);
+
+        (bool s, ) = address(token).call(data);
+
+        assertFalse(s);
+    }
+
+    function test_NoSetFeeFunction() public {
+        (bool s, ) = address(token).call(abi.encodeWithSignature("setFee(uint256)", 100));
+
+        assertFalse(s);
+    }
+
+    function test_NoPauseFunction() public {
+        (bool s, ) = address(token).call(abi.encodeWithSignature("pause()"));
+
+        assertFalse(s);
+    }
+
+    function test_NoOwnerFunction() public {
+        (bool s, ) = address(token).call(abi.encodeWithSignature("owner()"));
+
+        assertFalse(s);
     }
 
     function test_Metadata() public view {
