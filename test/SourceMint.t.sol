@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import { Test, console } from "forge-std/Test.sol";
 import { SourceMint } from "../src/SourceMint.sol";
+import { ERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+
 
 contract SourceMintTest is Test {
     SourceMint token;
@@ -12,8 +14,7 @@ contract SourceMintTest is Test {
     address bob = address(0xB0B);
     address user = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
-    uint256 private constant PRIVATE_KEY =
-        0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+    uint256 private constant PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
     function setUp() public {
         token = new SourceMint(INITIAL_SUPPLY);
@@ -21,7 +22,7 @@ contract SourceMintTest is Test {
 
     function test_PermitRejectsExpiredDeadline() public {
         address signer = vm.addr(PRIVATE_KEY);
-        address spender = user;
+        address spender = makeAddr("spender");
         address relayer = makeAddr("relayer");
         uint256 value = 100;
         uint256 deadline = block.timestamp + 1 hours;
@@ -43,7 +44,12 @@ contract SourceMintTest is Test {
         vm.warp(block.timestamp + 2 hours);
 
         vm.prank(relayer);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC20Permit.ERC2612ExpiredSignature.selector,
+                deadline
+            )
+        );
         token.permit(signer, spender, value, deadline, v, r, s);
 
         //kalau permit kedua berhasil, maka allowance akan bertambah, nonce akan bertambah
@@ -57,7 +63,7 @@ contract SourceMintTest is Test {
 
     function test_PermitRejectsReusedSignature() public {
         address signer = vm.addr(PRIVATE_KEY);
-        address spender = user;
+        address spender = makeAddr("spender");
         address relayer = makeAddr("relayer");
         uint256 value = 100;
         uint256 deadline = block.timestamp + 1 hours;
@@ -75,15 +81,20 @@ contract SourceMintTest is Test {
         token.permit(signer, spender, value, deadline, v, r, s);
 
         //kalau sebelumnnya ada allowance yang belum diclaim
-        assertEq(token.allowance(signer, spender), 0);
+        assertEq(token.allowance(signer, spender), value);
         //kalau signer mengirim sendiri signaturenya ke contract
         assertEq(token.nonces(signer), nonceBefore + 1);
 
         uint256 nonceAfter = token.nonces(signer);
-        uint256 balanceSignerAfter = token.balanceOf(signer);
-        uint256 balanceSpenderAfter = token.balanceOf(spender);
+        // Reusing the signature with the new nonce recovers a different address.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC20Permit.ERC2612InvalidSigner.selector,
+                ecrecover(_permitDigest(signer, spender, value, nonceAfter, deadline), v, r, s),
+                signer
+            )
+        );
         vm.prank(relayer);
-        vm.expectRevert();
         token.permit(signer, spender, value, deadline, v, r, s);
 
         //kalau permit kedua berhasil, maka allowance akan bertambah, nonce akan bertambah
@@ -91,13 +102,13 @@ contract SourceMintTest is Test {
         assertEq(token.nonces(signer), nonceAfter);
         //kalau setelah permit spender mengambil allowance, maka balance spender akan bertambah dan
         // balance signer akan berkurang
-        assertEq(token.balanceOf(signer), balanceSignerAfter);
-        assertEq(token.balanceOf(spender), balanceSpenderAfter);
+        assertEq(token.balanceOf(signer), 1000);
+        assertEq(token.balanceOf(spender), 0);
     }
 
     function test_PermitValidSignatureFromRelayer() public {
         address signer = vm.addr(PRIVATE_KEY);
-        address spender = user;
+        address spender = makeAddr("spender");
         address relayer = makeAddr("relayer");
         uint256 value = 100;
         uint256 deadline = block.timestamp + 1 hours;
