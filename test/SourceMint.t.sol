@@ -199,19 +199,23 @@ contract SourceMintTest is Test {
         assertEq(token.balanceOf(alice), 100 ether);
         assertEq(token.balanceOf(address(this)), INITIAL_SUPPLY - 100 ether);
 
+        uint256 transferAmount = 40 ether;
+
         vm.prank(alice);
-        token.transfer(bob, 40 ether);
-        assertEq(token.balanceOf(bob), 40 ether);
+        token.transfer(bob, transferAmount);
+        assertEq(token.balanceOf(bob), transferAmount);
         assertEq(token.balanceOf(alice), 60 ether);
     }
 
     function test_BurnReducesSupply() public {
         token.transfer(alice, 50 ether);
 
+        uint256 burnAmount = 10 ether;
+
         vm.prank(alice);
-        token.burn(10 ether);
+        token.burn(burnAmount);
 
         assertEq(token.balanceOf(alice), 40 ether);
-        assertEq(token.totalSupply(), INITIAL_SUPPLY - 10 ether);
+        assertEq(token.totalSupply(), INITIAL_SUPPLY - burnAmount);
     }
 }
