@@ -33,9 +33,7 @@ contract SourceMintTest is Test {
         uint256 balanceSignerBefore = token.balanceOf(signer);
         uint256 balanceSpenderBefore = token.balanceOf(spender);
 
-        //kalau sebelumnnya ada allowance yang belum diclaim
         assertEq(token.allowance(signer, spender), 0);
-        //kalau signer mengirim sendiri signaturenya ke contract
         assertTrue(relayer != signer);
 
         (uint8 v, bytes32 r, bytes32 s) =
@@ -52,11 +50,8 @@ contract SourceMintTest is Test {
         );
         token.permit(signer, spender, value, deadline, v, r, s);
 
-        //kalau permit kedua berhasil, maka allowance akan bertambah, nonce akan bertambah
         assertEq(token.allowance(signer, spender), 0);
         assertEq(token.nonces(signer), nonceBefore);
-        //kalau setelah permit spender mengambil allowance, maka balance spender akan bertambah dan
-        // balance signer akan berkurang
         assertEq(token.balanceOf(signer), balanceSignerBefore);
         assertEq(token.balanceOf(spender), balanceSpenderBefore);
     }
@@ -80,13 +75,10 @@ contract SourceMintTest is Test {
         vm.prank(relayer);
         token.permit(signer, spender, value, deadline, v, r, s);
 
-        //kalau sebelumnnya ada allowance yang belum diclaim
         assertEq(token.allowance(signer, spender), value);
-        //kalau signer mengirim sendiri signaturenya ke contract
         assertEq(token.nonces(signer), nonceBefore + 1);
 
         uint256 nonceAfter = token.nonces(signer);
-        // Reusing the signature with the new nonce recovers a different address.
         vm.expectRevert(
             abi.encodeWithSelector(
                 ERC20Permit.ERC2612InvalidSigner.selector,
@@ -97,11 +89,8 @@ contract SourceMintTest is Test {
         vm.prank(relayer);
         token.permit(signer, spender, value, deadline, v, r, s);
 
-        //kalau permit kedua berhasil, maka allowance akan bertambah, nonce akan bertambah
         assertEq(token.allowance(signer, spender), value);
         assertEq(token.nonces(signer), nonceAfter);
-        //kalau setelah permit spender mengambil allowance, maka balance spender akan bertambah dan
-        // balance signer akan berkurang
         assertEq(token.balanceOf(signer), 1000);
         assertEq(token.balanceOf(spender), 0);
     }
@@ -119,9 +108,7 @@ contract SourceMintTest is Test {
         uint256 balanceSignerBefore = token.balanceOf(signer);
         uint256 balanceSpenderBefore = token.balanceOf(spender);
 
-        //kalau sebelumnnya ada allowance yang belum diclaim
         assertEq(token.allowance(signer, spender), 0);
-        //kalau signer mengirim sendiri signaturenya ke contract
         assertTrue(relayer != signer);
 
         {
@@ -132,11 +119,8 @@ contract SourceMintTest is Test {
             token.permit(signer, spender, value, deadline, v, r, s);
         }
 
-        //kalau permit kedua berhasil, maka allowance akan bertambah, nonce akan bertambah
         assertEq(token.allowance(signer, spender), value);
         assertEq(token.nonces(signer), nonceBefore + 1);
-        //kalau setelah permit spender mengambil allowance, maka balance spender akan bertambah dan
-        // balance signer akan berkurang
         assertEq(token.balanceOf(signer), balanceSignerBefore);
         assertEq(token.balanceOf(spender), balanceSpenderBefore);
     }
