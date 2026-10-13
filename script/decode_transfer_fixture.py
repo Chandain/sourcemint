@@ -1,5 +1,3 @@
-
-
 log = {
     "topics": [
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
@@ -15,22 +13,29 @@ TRANSFER_TOPIC = (
 )
 
 
-
 def decode_transfer(log):
-    if len(log["topics"]) != 3:
+    if not isinstance(log, dict):
+        raise ValueError("log must be an object")
+
+    topics = log.get("topics")
+
+    if not isinstance(topics, list):
+        raise ValueError("topics must be a list")
+
+    if len(topics) != 3:
         raise ValueError("Transfer must have 3 topics")
 
-    if(log["topics"][0] != TRANSFER_TOPIC):
+    if(topics[0] != TRANSFER_TOPIC):
         raise ValueError("topics[0] must be Transfer signature")
 
-    sender_topics = log["topics"][1]
-    receiver_topics = log["topics"][2]
+    sender_topics = topics[1]
+    receiver_topics = topics[2]
 
-    if len(sender_topics) != 66:
-        raise ValueError("Invalid sender topic length")
+    if not isinstance(sender_topics, str) or len(sender_topics) != 66:
+        raise ValueError("Invalid sender topic or length")
 
-    if len(receiver_topics) != 66:
-        raise ValueError("Invalid receiver topic length")
+    if not isinstance(receiver_topics, str) or len(receiver_topics) != 66:
+        raise ValueError("Invalid receiver topic or length")
 
     for name, topic in (("sender", sender_topics), ("receiver", receiver_topics)):
         if not topic.startswith("0x"):
@@ -41,10 +46,10 @@ def decode_transfer(log):
     sender = "0x" + sender_topics[-40:]
     receiver = "0x" + receiver_topics[-40:]
 
-    data = log["data"]
+    data = log.get("data")
 
-    if len(log["data"]) != 66:
-        raise ValueError("Invalid data topic length")
+    if not isinstance(data, str) or len(data) != 66:
+        raise ValueError("Invalid data topic or length")
 
     if not data.startswith("0x"):
         raise ValueError("Data must start witn 0x")
@@ -53,11 +58,20 @@ def decode_transfer(log):
         raise ValueError("Data must contain only hex characters")
 
     amount = int(data, 16)
+    txs_hash = log.get("transactionHash")
+
+    if (
+        not isinstance(txs_hash, str)
+        or len(txs_hash) != 66
+        or not txs_hash.startswith("0x")
+        or any(c not in "0123456789abcdefABCDEF" for c in txs_hash[2:])
+    ):
+        raise ValueError("Invalid transaction hash")
 
     return{
         "from": {"hash": sender},
         "to": {"hash": receiver},
-        "transaction_hash": log["transactionHash"],
+        "transaction_hash": txs_hash,
         "total": {"value": str(amount)},
     }
 

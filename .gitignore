@@ -6,19 +6,49 @@ reports/
 
 # Env / secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+*-credentials.json
 
 # OS/editor
 .DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
 .idea/
 .cursor/
+.fleet/
+.editorconfig
+*.code-workspace
 *.swp
+*.swo
+*~
+*.tmp
+*.bak
 
-# Agent workspace (keep README only)
-.ai/*
-!.ai/README.md
+# Local agent workspace
+.ai/
+.agents/
+.codex/
+.aws/
+
+# Local tool cache
+.cache/
 # Firebase local emulator/deployment cache
 .firebase/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/

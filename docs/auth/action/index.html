@@ -9,7 +9,11 @@
   <script>
     window.sourceMintEmailAction = (() => {
       const params = new URLSearchParams(location.search);
-      const action = { mode: params.get('mode') || '', oobCode: params.get('oobCode') || '' };
+      const action = {
+        mode: params.get('mode') || '',
+        oobCode: params.get('oobCode') || '',
+        apiKey: params.get('apiKey') || '',
+      };
       if (location.search) history.replaceState(null, '', location.pathname);
       return action;
     })();
@@ -54,8 +58,8 @@
   </main>
   <script>
     (() => {
-      const apiKey = 'AIzaSyBwDoU2eYqAPCQjmrX_96dEGLm7ujzdM5w';
       const action = window.sourceMintEmailAction;
+      const apiKey = action.apiKey;
       const sections = ['checking', 'reset', 'verified', 'recovered', 'done', 'error'];
       const show = (name) => sections.forEach((id) => { document.getElementById(id).hidden = id !== name; });
       async function request(endpoint, payload) {
@@ -71,7 +75,7 @@
         return result;
       }
       async function start() {
-        if (!action.oobCode) { show('error'); return; }
+        if (!action.oobCode || !apiKey) { show('error'); return; }
         try {
           if (action.mode === 'verifyEmail' || action.mode === 'recoverEmail') {
             await request('accounts:update', { oobCode: action.oobCode });

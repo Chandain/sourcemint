@@ -1,5 +1,9 @@
-from script.block_windows import block_windows
-from script.decode_transfer_fixture import decode_transfer, TRANSFER_TOPIC
+if __package__:
+    from .block_windows import block_windows
+    from .decode_transfer_fixture import decode_transfer, TRANSFER_TOPIC
+else:
+    from block_windows import block_windows
+    from decode_transfer_fixture import decode_transfer, TRANSFER_TOPIC
 
 
 def fetch_rpc_transfers(token, start, end, rpc_call):
@@ -18,15 +22,28 @@ def fetch_rpc_transfers(token, start, end, rpc_call):
             }],
         }
 
-        respons = rpc_call(request)
+        response = rpc_call(request)
 
-        if "error" in respons:
+
+        if not isinstance(response, dict):
+            raise ValueError("RPC response must be an object")
+
+        if response.get("jsonrpc") != "2.0":
+            raise ValueError("Invalid JSON-RPC version")
+
+        if (
+            type(response.get("id")) is not int
+            or response["id"] != request["id"]
+        ):
+            raise ValueError("RPC response ID mismatch")
+
+        if "error" in response:
             raise ValueError("RPC returned an error")
 
-        if "result" not in respons:
+        if "result" not in response:
             raise ValueError("RPC response missing result")
 
-        logs = respons["result"]
+        logs = response["result"]
 
         if not isinstance(logs, list):
             raise ValueError("RPC result must be a list")

@@ -26,7 +26,10 @@ class TestFetchRpcTransfers(unittest.TestCase):
         second_log = deepcopy(log)
         second_log["transactionHash"] = "0x" + "cd" * 32
         second_log["data"] = "0x" + format(2**256 - 1, "064x")
-        rpc = Mock(side_effect=[{"result": [log]}, {"result": [second_log]}])
+        rpc = Mock(side_effect=[
+            {"jsonrpc": "2.0", "id": 100, "result": [log]},
+            {"jsonrpc": "2.0", "id": 10100, "result": [second_log]},
+        ])
 
         result = fetch_rpc_transfers(self.token, 100, 10100, rpc)
 
@@ -45,7 +48,7 @@ class TestFetchRpcTransfers(unittest.TestCase):
         ])
 
     def test_empty_result_succeeds(self):
-        rpc = Mock(return_value={"result": []})
+        rpc = Mock(return_value={"jsonrpc": "2.0", "id": 100, "result": []})
         self.assertEqual(fetch_rpc_transfers(self.token, 100, 106, rpc), [])
         rpc.assert_called_once_with(self.expected_request(100, 106))
 
@@ -57,7 +60,10 @@ class TestFetchRpcTransfers(unittest.TestCase):
         )
         for response, message in cases:
             with self.subTest(response=response):
-                rpc = Mock(side_effect=[{"result": [log]}, response])
+                rpc = Mock(side_effect=[
+                    {"jsonrpc": "2.0", "id": 100, "result": [log]},
+                    {"jsonrpc": "2.0", "id": 10100, **response},
+                ])
                 with self.assertRaisesRegex(ValueError, f"^{message}$"):
                     fetch_rpc_transfers(self.token, 100, 10100, rpc)
                 self.assertEqual(rpc.call_count, 2)

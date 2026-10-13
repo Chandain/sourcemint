@@ -20,7 +20,7 @@ class TestBlockWindows(unittest.TestCase):
         for size in (0, -1):
             with self.subTest(size=size):
                 with self.assertRaisesRegex(
-                    ValueError, 
+                    ValueError,
                     r"^max_blocks must be positive$"
                 ):
                     block_windows(100, 106, size)
@@ -45,4 +45,3 @@ class TestBlockWindows(unittest.TestCase):
             next_start = last + 1
 
         self.assertEqual(total, end - start + 1)
-

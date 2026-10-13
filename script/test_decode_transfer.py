@@ -1,4 +1,3 @@
-
 import unittest
 from copy import deepcopy
 
@@ -30,16 +29,16 @@ class TestDecodeTransfer(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             r"^topics\[0\] must be Transfer signature$"
-        ):            
+        ):
             decode_transfer(bad_log)
 
     def test_rejects_wrong_event_sender(self):
         bad_log = deepcopy(log)
         bad_log["topics"][1] = "0x" + "0" * 24 + "11" * 22
-        
+
         with self.assertRaisesRegex(
             ValueError,
-            r"^Invalid sender topic length$"
+            r"^Invalid sender topic or length$"
         ):
             decode_transfer(bad_log)
 
@@ -50,7 +49,7 @@ class TestDecodeTransfer(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            r"^Invalid receiver topic length$"
+            r"^Invalid receiver topic or length$"
         ):
             decode_transfer(bad_log)
 
@@ -60,7 +59,7 @@ class TestDecodeTransfer(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            r"^Invalid data topic length$"
+            r"^Invalid data topic or length$"
         ):
             decode_transfer(bad_log)
 
@@ -100,5 +99,3 @@ class TestDecodeTransfer(unittest.TestCase):
                     "transaction_hash": valid_log["transactionHash"],
                     "total": {"value": str(value)},
                 })
-
-
