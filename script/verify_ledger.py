@@ -47,7 +47,7 @@ SOURCES = (
     "https://base.blockscout.com/api/v2/tokens/{token}/transfers",
 )
 DECIMALS = 10**18
-ATTEMPTS_PER_SOURCE = 8  # ~2+4+...+128s: rides out several minutes of downtime
+ATTEMPTS_PER_SOURCE = 3   # 3 attempts; 2s + 4s backoff before RPC fallback
 
 
 class SourceUnavailable(Exception):

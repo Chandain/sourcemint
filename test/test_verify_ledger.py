@@ -200,9 +200,8 @@ class TestLedgerFallback(unittest.TestCase):
             str(caught.exception),
         )
 
-    def test_primary_retry_sleep_exceeds_three_minutes(self):
+    def test_primary_retry_uses_three_attempts_and_six_seconds_backoff(self):
         with (
-            patch.object(verifier, "ATTEMPTS_PER_SOURCE", 8),
             patch.object(
                 verifier.urllib.request,
                 "urlopen",
@@ -221,10 +220,9 @@ class TestLedgerFallback(unittest.TestCase):
             for call in sleep.call_args_list
         ]
 
-        self.assertEqual(request.call_count, 8)
-        self.assertEqual(delays, [2, 4, 8, 16, 32, 64, 128])
-        self.assertEqual(sum(delays), 254)
-        self.assertGreater(sum(delays), 180)
+        self.assertEqual(request.call_count, 3)
+        self.assertEqual(delays, [2, 4])
+        self.assertEqual(sum(delays), 6)
 
 
 if __name__ == "__main__":

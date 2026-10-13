@@ -14,12 +14,6 @@ before it stops serving the existing GitHub Pages deployment. Keep the
 GitHub Pages source configured until the Firebase custom domain has an active
 certificate and the homepage, whitepaper, and `/auth/action/` have been checked.
 
-The email action page reads the `apiKey` parameter supplied in
-[Firebase-generated email action links](https://firebase.google.com/docs/auth/custom-email-handler).
-It captures the action parameters before removing them from the browser URL.
-Use Firebase-generated links when checking `/auth/action/`; keep API keys and
-deployment credentials out of the repository.
-
 This repo uses **GCP-only automation**:
 - CI on push to `main` (no secrets used)
 - Manual-only deploy trigger for Base mainnet (secrets from Secret Manager)
