@@ -1,9 +1,21 @@
-# Ledger RPC fallback: validation and remaining acceptance checks
+# Ledger RPC fallback: receipts, balances, and total supply
 
-The verifier tries Blockscout first. Only a `SourceUnavailable` failure triggers
-RPC fallback. Partial primary pages and partial RPC windows are discarded.
-The RPC scan starts at creation block 41988939 and ends at the validated head,
-using windows of at most 10,000 blocks. No third-party Python dependencies are added.
+The verifier tries Blockscout first. A `SourceUnavailable` failure discards partial
+primary pages and triggers RPC fallback in `main()`.
+
+The fallback uses `eth_getTransactionReceipt` to match SRCMNT Transfer logs against
+ledger entries. Balance verification derives expected balances and total supply
+from the ledger, fetches a block with `eth_blockNumber`, then reads `balanceOf`
+and `totalSupply` using `eth_call` at that block. It uses only the Python standard
+library.
+
+Ledger `amount` values are strings in whole-token units, including fractions:
+`"0.5"` means half a SRCMNT. The verifier converts these values to integer base
+units internally (`"0.5"` becomes `500000000000000000`) and uses exact integer
+comparisons for primary history, receipts, balances, and total supply. It never
+uses floating-point arithmetic for amounts. Values requiring precision beyond
+18 decimal places, negative amounts, non-finite values, and non-string amounts
+are rejected with exit 1; trailing fractional zeros are accepted without rounding.
 
 Set `BASE_RPC_URL` to the desired endpoint. The Ledger workflow supplies the public,
 no-key endpoint `https://mainnet.base.org`; credentials are not stored in code.
@@ -18,11 +30,13 @@ Both direct execution and `python3 -m script.verify_ledger` are supported.
 | Case | Behavior |
 | --- | --- |
 | Primary succeeds | RPC is not called; verify the primary history. |
-| Primary fails, complete RPC history succeeds | Verify the decoded RPC history. |
+| Primary fails, receipt and balance checks succeed | Exit 0. |
 | Primary fails and RPC fails with a transport error, HTTP 429, invalid JSON, or malformed data | `COULD NOT VERIFY`, exit 2; no accounting verdict. |
-| Later RPC window fails | Reject the entire scan, including earlier windows. |
-| Valid RPC `result: []` | A successful query with zero matching logs; accounting still compares against ledger entries. |
-| Verified history agrees / disagrees with ledger | Exit 0 / exit 1 respectively. |
+| A receipt has no matching Transfer log | Accounting violation, exit 1. |
+| Balance or supply differs from the ledger by even one wei | Accounting violation, exit 1. |
+| RPC `result` is null, or balance/supply data is `"0x"` | `COULD NOT VERIFY`, exit 2. Empty data is not a zero balance. |
+| A valid encoded zero matches the ledger | Verification succeeds. |
+| Primary history agrees / disagrees with ledger | Exit 0 / exit 1 respectively. |
 
 ## Reproducible offline validation
 
@@ -33,16 +47,15 @@ python3 -B -m unittest discover -s script -p 'test_*.py' -v
 python3 -B -m unittest discover -s test -p 'test_*.py' -v
 ```
 
-Regression tests cover strict response IDs (including boolean/float rejection),
-missing/null/wrong-type log fields, invalid transaction hashes, real decoder-to-ledger
-matching, partial history rejection, transport failures, and both CLI entrypoints.
-All provider calls in the Python tests are mocked; no live RPC is called.
+The script tests cover receipt matching, balance and supply calculations,
+one-wei mismatches, null and empty results, and transport failures. The fake RPC
+in the balance tests runs the real `rpc_call` with a mocked HTTP transport, so
+timeouts, connection failures, HTTP errors, and invalid JSON exercise its actual
+exception handling.
 
-Validated locally on 2026-10-13 in `sourcemint` on `rpc-fallback`:
-18 decoder/adapter tests and 13 integration/regression tests passed
-(31 Python tests total). `git diff --check` and
-`forge fmt --check test/SourceMint.t.sol` also passed.
-Solidity tests were not rerun during repository consolidation.
+The integration tests cover primary success, fallback request ordering, partial
+primary page rejection, and exit codes 0, 1, and 2. All provider calls in these
+tests are mocked; no live RPC is called.
 
 ## Runtime evidence and draft limitations
 
@@ -51,13 +64,6 @@ of 2 and 4 seconds. An offline regression test uses the production
 retry setting and verifies six seconds of scheduled sleep without
 actually waiting.
 
-This verifies the retry policy, not network request duration or
-full-history RPC runtime. The approximately three-minute target
-for the RPC fallback remains unverified.
-
-Full-history success through the public RPC and its runtime are not established
-by offline tests. The earlier single-block public endpoint attempt returned HTTP
-429 / RPC -32011. Public RPC compatibility and the runtime target remain unverified
-until live validation succeeds.
-
-This patch does not change existing ledger amount formatting.
+Offline tests establish behavior under mocked responses. Public RPC availability
+and fallback runtime still require live validation. Receipt and balance checks
+do not reconstruct the complete history of on-chain transfers.

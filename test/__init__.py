@@ -1,1 +1,0 @@
-"""SourceMint test suite."""
