@@ -172,6 +172,7 @@ def mock_rpc(method, params, *, latest_block=200):
             return encode_uint256(balances.get(address, 0))
 
         if data.startswith(verifier.ALLOWANCE_SELECTOR):
+            raise verifier.SourceUnavailable("Mock allowance RPC failure")
             owner = "0x" + data[10:74][-40:]
             spender = "0x" + data[74:138][-40:]
             approved = 100 <= block < 202 and owner == alice.lower() and spender == bob.lower()
@@ -225,6 +226,15 @@ def run_main(ledger, *, latest_block=200):
 
 
 class RegressionTest(unittest.TestCase):
+
+    def test_confirmed_violation_survives_allowance_rpc_failure(self):
+        ledger = make_mock_ledger()
+        ledger["project_wallets"]["bob"] = bob
+
+        code, output = run_main(ledger, latest_block=202)
+
+        self.assertEqual(code, 1, msg=output)
+        print(output)
 
     def test_round_trip_then_revoke(self):
         ledger = make_mock_ledger()
